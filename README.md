@@ -25,5 +25,5 @@ python3 move_and_grip_web_0925.py  # 실행
 - **line 37** : YOLO 모델 path 변경
 
 ### move_and_grip_web_0925.py
-- **line 120** : 캘리브레이션 보정 파일 경로 (`xy_correction.json`)
-- **line 121** : 기존 캘리브레이션 파일 경로 (`T_base_camera.npy`)
+- **line 130** : 캘리브레이션 보정 파일 경로 (`xy_correction.json`)
+- **line 131** : 기존 캘리브레이션 파일 경로 (`T_base_camera.npy`)
