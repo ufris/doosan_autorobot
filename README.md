@@ -1,6 +1,10 @@
 # doosan_autorobot
 두산 로봇팔
 
+## 파일 설명
+- yolo_inference_0922.py : yolo로 객체 검출
+- move_and_grip_web_0925.py : 로봇팔 구동(웹으로 구동)
+
 ## 수정이 필요한 경로
 
 ### yolo_inference_0922.py
