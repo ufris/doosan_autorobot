@@ -5,7 +5,6 @@
 ```bash
 ros2 launch dsr_bringup2 dsr_bringup2_rviz.launch.py mode:=real host:=110.120.1.13 model:=e0509
 ros2 run dsr_gripper gripper_service
-python3 -m http.server 8080  # 서버 올리기
 python3 move_and_grip_web_0925.py  # 실행
 ```
 
