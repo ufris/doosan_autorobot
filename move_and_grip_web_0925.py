@@ -11,12 +11,17 @@
 # $ source ./install/local_setup.bash
 # $ ros2 run dsr_gripper gripper_service
 #
-# 터미널 3(이 스크립트 — 8000번 포트로 API 서버가 같이 뜬다)
+# 터미널 3(이 스크립트 — 8000번 포트로 화면 + API 가 같이 뜬다)
 # $ pip install fastapi uvicorn   # 처음 한 번만
-# $ python3 move_and_grip_web_0923.py
+# $ python3 move_and_grip_web_0928.py
 #
 # 화면
-#   브라우저에서 food_pick_console.html 을 열면 자동으로 붙는다.
+#   브라우저에서 http://localhost:8000 으로 접속하면 끝이다.
+#   같은 네트워크의 태블릿/노트북에서는 http://<이 PC의 IP>:8000 으로 접속한다.
+#
+#   ※ 0925 까지는 화면을 띄우려면 python3 -m http.server 8080 을 따로 돌려야 했다.
+#     이제 이 스크립트가 food_pick_console.html 을 직접 내려주므로 8080 은 필요 없다.
+#     (html 은 이 스크립트와 같은 폴더에 있어야 한다)
 #   ※ 로봇 없이 화면만 테스트하려면 이 스크립트 대신 mock_server.py 를 띄울 것.
 #     (둘 다 8000번이라 동시에는 못 띄운다)
 #######################################################
@@ -42,6 +47,7 @@ import yolo_inference_0922 as my_yolo
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, HTMLResponse
 
 ######################################## 로봇 세팅
 ROBOT_ID = "dsr01"
@@ -88,6 +94,10 @@ DRY_RUN = False   # True 면 좌표만 계산/출력하고 집는 동작은 하�
 
 ######## 웹 서버 ########
 SERVER_PORT = 8000
+# 화면(html)은 이 스크립트와 같은 폴더에서 찾는다. 경로를 하드코딩하지 않으므로
+# 저장소를 통째로 clone 한 다른 PC 에서도 그대로 돌아간다.
+WEB_DIR   = Path(__file__).resolve().parent
+HTML_FILE = WEB_DIR / "food_pick_console.html"
 
 ######## 로봇 속도 / 가속도 ########
 VEL_J, ACC_J = 140, 80   # movej — 관절 이동(자세 전환). 크게 휘두르므로 주변 확인 필수
@@ -481,6 +491,40 @@ def post_pick(req: dict):
     return {"ok": True, "count": len(indices), "queue_position": job_queue.qsize()}
 
 
+@app.get("/", include_in_schema=False)
+def get_console():
+    """브라우저가 http://<이 PC>:8000 으로 들어오면 콘솔 화면을 그대로 돌려준다.
+
+    html 안의 JS 는 자기가 받아온 호스트의 8000번으로 fetch 하므로, 이렇게
+    같은 포트에서 내려주면 주소가 저절로 맞는다. 태블릿에서 열어도 동작한다.
+    """
+    if not HTML_FILE.exists():
+        return HTMLResponse(
+            f"<h1>{HTML_FILE.name} 을 찾을 수 없습니다</h1>"
+            f"<p>이 스크립트와 같은 폴더에 두세요: <code>{WEB_DIR}</code></p>",
+            status_code=404)
+    return FileResponse(HTML_FILE, media_type="text/html")
+
+
+@app.get("/food_pick_console.html", include_in_schema=False)
+def get_console_by_name():
+    """예전처럼 파일명까지 붙여서 들어와도 같은 화면을 준다 (북마크 호환)."""
+    return get_console()
+
+
+def _local_ip():
+    """다른 기기에서 접속할 때 쓸 이 PC 의 LAN IP. 못 구하면 localhost 로 떨어진다.
+
+    UDP 소켓은 connect 해도 패킷을 보내지 않는다 — 어느 랜카드로 나갈지만 고른다.
+    """
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+            s.connect(("8.8.8.8", 80))
+            return s.getsockname()[0]
+    except Exception:
+        return "localhost"
+
+
 def run_server():
     uvicorn.run(app, host="0.0.0.0", port=SERVER_PORT, log_level="warning")
 
@@ -610,7 +654,11 @@ try:
 
     threading.Thread(target=run_server, daemon=True).start()
     print(f"\n웹 서버 시작: http://localhost:{SERVER_PORT}")
-    print("아티팩트(음식 집기 콘솔)에서 이 주소로 연결하세요.\n")
+    print(f"  같은 네트워크의 다른 기기에서는  http://{_local_ip()}:{SERVER_PORT}")
+    if HTML_FILE.exists():
+        print("  브라우저에서 위 주소로 접속하면 콘솔 화면이 바로 뜹니다.\n")
+    else:
+        print(f"  경고: {HTML_FILE} 이 없습니다 — API 는 돌지만 화면은 안 뜹니다.\n")
 
     threading.Thread(target=robot_worker, daemon=True).start()
     print("주문 대기 중… (Ctrl+C 로 종료)")
