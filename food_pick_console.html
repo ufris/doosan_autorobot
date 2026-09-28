@@ -1,0 +1,472 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>음식 집기 콘솔</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=Barlow:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+
+<style>
+  :root {
+    --ground: #EBEEF0;
+    --surface: #FFFFFF;
+    --surface-2: #F4F6F7;
+    --ink: #14181C;
+    --ink-2: #4A535C;
+    --ink-3: #7C8792;
+    --line: #D6DBDF;
+    --line-strong: #B7BFC6;
+    --accent: #C93F0B;
+    --accent-ink: #FFFFFF;
+    --accent-soft: #FBEDE6;
+    --ok: #0F7048;
+    --ok-soft: #E4F3EC;
+    --bad: #AE2318;
+    --warn: #8A5A00;
+    --shadow: 0 1px 2px rgba(20, 24, 28, .06), 0 6px 18px rgba(20, 24, 28, .05);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ground: #0F1317;
+      --surface: #191E23;
+      --surface-2: #20262C;
+      --ink: #E7EBEE;
+      --ink-2: #A4AEB8;
+      --ink-3: #6D7883;
+      --line: #2B333A;
+      --line-strong: #3C454E;
+      --accent: #FF7A45;
+      --accent-ink: #1A0E07;
+      --accent-soft: #332016;
+      --ok: #45C68C;
+      --ok-soft: #14291F;
+      --bad: #F0776D;
+      --warn: #D7A422;
+      --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 6px 18px rgba(0, 0, 0, .3);
+    }
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: "Barlow", system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-size: 15px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 920px;
+    margin: 0 auto;
+    padding: 20px 16px 48px;
+  }
+
+  .eyebrow {
+    font-family: "Barlow Condensed", "Barlow", sans-serif;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .1em;
+    font-size: 13px;
+    color: var(--ink-3);
+  }
+
+  header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px 14px;
+    padding-bottom: 14px;
+    border-bottom: 2px solid var(--ink);
+    margin-bottom: 18px;
+  }
+  h1 {
+    font-family: "Barlow Condensed", "Barlow", sans-serif;
+    font-size: 30px;
+    font-weight: 600;
+    margin: 0;
+  }
+
+  .status {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink-3);
+  }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--ink-3); flex: none; }
+  .status[data-state="on"] { color: var(--ok); }
+  .status[data-state="on"] .dot { background: var(--ok); box-shadow: 0 0 0 3px var(--ok-soft); }
+  .status[data-state="off"] { color: var(--bad); }
+  .status[data-state="off"] .dot { background: var(--bad); }
+
+  section.panel {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    box-shadow: var(--shadow);
+    margin-bottom: 18px;
+  }
+  .panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--line);
+  }
+  .panel-body { padding: 14px; }
+
+  /* ---------- 클래스 선택 ---------- */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 10px;
+  }
+  .tile {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1px;
+    text-align: left;
+    padding: 14px 13px;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--line-strong);
+    border-radius: 3px;
+    font-family: inherit;
+    color: var(--ink);
+    cursor: pointer;
+    transition: background .12s ease, border-color .12s ease;
+  }
+  .tile:hover { background: var(--surface); border-color: var(--ink-3); }
+  .tile:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .tile .name { font-size: 17px; font-weight: 600; line-height: 1.25; }
+  .tile .sub {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 12px;
+    color: var(--ink-3);
+    margin-top: 3px;
+  }
+  .tile[aria-pressed="true"] {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+    border-left-color: var(--accent);
+  }
+  .tile .order {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--accent-ink);
+    background: var(--accent);
+    border-radius: 2px;
+    padding: 1px 6px;
+  }
+
+  .hint {
+    color: var(--ink-3);
+    font-size: 14px;
+    padding: 18px 2px;
+    border: 1px dashed var(--line-strong);
+    border-radius: 3px;
+    text-align: center;
+  }
+
+  /* ---------- 전송 ---------- */
+  .footer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    padding: 14px;
+    border-top: 1px solid var(--line);
+  }
+  .picked {
+    flex: 1 1 220px;
+    min-width: 0;
+    font-size: 14px;
+    color: var(--ink-2);
+    overflow-wrap: anywhere;
+  }
+  .picked b { color: var(--ink); font-weight: 600; }
+
+  button {
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    border-radius: 3px;
+    border: 1px solid var(--line-strong);
+    background: var(--surface-2);
+    color: var(--ink);
+    padding: 8px 14px;
+    cursor: pointer;
+  }
+  button:hover:not(:disabled) { border-color: var(--ink-3); }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .send {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--accent-ink);
+    padding: 11px 28px;
+    font-size: 16px;
+  }
+  .send:hover:not(:disabled) { filter: brightness(1.07); border-color: var(--accent); }
+
+  /* ---------- 로그 ---------- */
+  .log {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    max-height: 260px;
+    overflow-y: auto;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 12.5px;
+    line-height: 1.55;
+  }
+  .log li {
+    display: grid;
+    grid-template-columns: 62px 1fr;
+    gap: 8px;
+    padding: 4px 0;
+    border-bottom: 1px solid var(--line);
+    overflow-wrap: anywhere;
+  }
+  .log li:last-child { border-bottom: none; }
+  .log time { color: var(--ink-3); font-variant-numeric: tabular-nums; }
+  .log li[data-kind="ok"] .msg { color: var(--ok); }
+  .log li[data-kind="err"] .msg { color: var(--bad); }
+  .log li[data-kind="warn"] .msg { color: var(--warn); }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <h1>음식 집기 콘솔</h1>
+    <span class="status" id="status"><span class="dot"></span><span id="statusText">연결 확인 중…</span></span>
+  </header>
+
+  <section class="panel">
+    <div class="panel-head"><span class="eyebrow">클래스 선택</span></div>
+    <div class="panel-body">
+      <div class="grid" id="grid"></div>
+      <p class="hint" id="hint">서버에 연결되면 클래스가 표시됩니다</p>
+    </div>
+    <div class="footer">
+      <span class="picked" id="picked">집을 음식을 고르세요</span>
+      <button id="clear" type="button">비우기</button>
+      <button class="send" id="send" type="button" disabled>전송</button>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <span class="eyebrow">로그</span>
+      <button id="clearLog" type="button" style="font-size:12px; padding:3px 9px;">지우기</button>
+    </div>
+    <div class="panel-body">
+      <ul class="log" id="log"></ul>
+    </div>
+  </section>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  // ===================================================================
+  //  API 서버 주소 — 이 페이지를 받아온 PC 의 8000 번을 자동으로 가리킨다.
+  //    http://192.168.129.119:8080/... 으로 열면 → http://192.168.129.119:8000
+  //    http://localhost:8080/...      으로 열면 → http://localhost:8000
+  //    file:// 로 직접 열었을 때만 localhost 로 떨어진다.
+  //  특정 PC 로 고정하려면 아래를 "http://192.168.129.119:8000" 처럼 바꿀 것.
+  // ===================================================================
+  var SERVER = location.hostname
+    ? "http://" + location.hostname + ":8000"
+    : "http://localhost:8000";
+
+  // 모델 클래스명 → 화면에 보일 한글 이름. 없으면 원래 이름 그대로 나옵니다.
+  var KO = {
+    tomato: "토마토", cheese: "치즈", lettuce: "양상추", berry: "베리",
+    onion: "양파", brocoli: "브로콜리", broccoli: "브로콜리",
+    carrot: "당근", bacon: "베이컨"
+  };
+
+  var HEALTH_MS = 3000;   // 연결 상태 확인 주기
+
+  var state = {
+    classes: [],       // [{ idx, name }]
+    queue: [],         // 선택한 idx, 누른 순서대로
+    connected: null,   // null = 아직 모름
+    sending: false
+  };
+
+  var el = {
+    grid: document.getElementById("grid"),
+    hint: document.getElementById("hint"),
+    picked: document.getElementById("picked"),
+    send: document.getElementById("send"),
+    clear: document.getElementById("clear"),
+    status: document.getElementById("status"),
+    statusText: document.getElementById("statusText"),
+    log: document.getElementById("log"),
+    clearLog: document.getElementById("clearLog")
+  };
+
+  /* ---------- 로그 ---------- */
+  function log(msg, kind) {
+    var li = document.createElement("li");
+    li.dataset.kind = kind || "info";
+    var d = new Date();
+    var t = String(d.getHours()).padStart(2, "0") + ":" +
+            String(d.getMinutes()).padStart(2, "0") + ":" +
+            String(d.getSeconds()).padStart(2, "0");
+    li.innerHTML = '<time></time><span class="msg"></span>';
+    li.querySelector("time").textContent = t;
+    li.querySelector(".msg").textContent = msg;
+    el.log.insertBefore(li, el.log.firstChild);
+    while (el.log.children.length > 60) el.log.removeChild(el.log.lastChild);
+  }
+
+  /* ---------- 화면 ---------- */
+  function label(c) { return KO[c.name] || c.name; }
+
+  function render() {
+    el.grid.innerHTML = "";
+    el.hint.hidden = state.classes.length > 0;
+
+    state.classes.forEach(function (c) {
+      var pos = state.queue.indexOf(c.idx);
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "tile";
+      b.setAttribute("aria-pressed", pos >= 0 ? "true" : "false");
+
+      // 나중에 이미지를 넣으려면 여기에 <img src="..." class="thumb"> 한 줄 추가하면 됩니다.
+      b.innerHTML = '<span class="name"></span><span class="sub"></span>' +
+                    (pos >= 0 ? '<span class="order"></span>' : "");
+      b.querySelector(".name").textContent = label(c);
+      b.querySelector(".sub").textContent = c.name + " · index " + c.idx;
+      if (pos >= 0) b.querySelector(".order").textContent = pos + 1;
+
+      b.addEventListener("click", function () { toggle(c.idx); });
+      el.grid.appendChild(b);
+    });
+
+    if (state.queue.length) {
+      var names = state.queue.map(function (idx) {
+        for (var i = 0; i < state.classes.length; i++) {
+          if (state.classes[i].idx === idx) return label(state.classes[i]);
+        }
+        return "index " + idx;
+      });
+      el.picked.innerHTML = "선택 <b></b>";
+      el.picked.querySelector("b").textContent = names.join(" → ");
+    } else {
+      el.picked.textContent = "집을 음식을 고르세요";
+    }
+
+    el.send.disabled = state.queue.length === 0 || state.sending || !state.connected;
+  }
+
+  function toggle(idx) {
+    var pos = state.queue.indexOf(idx);
+    if (pos >= 0) state.queue.splice(pos, 1);
+    else state.queue.push(idx);
+    render();
+  }
+
+  /* ---------- 연결 ---------- */
+  function setConnected(on) {
+    if (state.connected === on) return;
+    state.connected = on;
+    el.status.dataset.state = on ? "on" : "off";
+    el.statusText.textContent = on ? "연결됨" : "서버 없음";
+    if (on) {
+      log("서버 연결됨: " + SERVER, "ok");
+      loadClasses();
+    } else {
+      log("서버에 연결할 수 없습니다: " + SERVER, "err");
+    }
+    render();
+  }
+
+  function loadClasses() {
+    fetch(SERVER + "/classes", { cache: "no-store" })
+      .then(function (r) { return r.json(); })
+      .then(function (names) {
+        var list = Object.keys(names).map(function (k) {
+          return { idx: Number(k), name: String(names[k]) };
+        });
+        list.sort(function (a, b) { return a.idx - b.idx; });
+        state.classes = list;
+        state.queue = [];
+        log("클래스 " + list.length + "종을 읽었습니다", "ok");
+        render();
+      })
+      .catch(function (e) { log("클래스 읽기 실패: " + e.message, "err"); });
+  }
+
+  function health() {
+    fetch(SERVER + "/labels", { cache: "no-store" })
+      .then(function (r) {
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        setConnected(true);
+      })
+      .catch(function () { setConnected(false); });
+  }
+
+  /* ---------- 전송 ---------- */
+  function send() {
+    var indices = state.queue.slice();
+    state.sending = true;
+    render();
+    log("전송: indices = [" + indices.join(", ") + "]");
+
+    fetch(SERVER + "/pick", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ indices: indices })
+    })
+      .then(function (r) {
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        return r.json();
+      })
+      .then(function (res) {
+        if (res && res.ok === false) {
+          log("서버가 거절했습니다: " + (res.reason || "이유 없음"), "err");
+          return;
+        }
+        var pos = res && res.queue_position;
+        log("주문 접수됨" + (pos ? " — 대기열 " + pos + "번째" : ""), "ok");
+        state.queue = [];   // 다음 주문을 바로 고를 수 있게 비움
+      })
+      .catch(function (e) { log("전송 실패: " + e.message, "err"); })
+      .finally(function () {
+        state.sending = false;
+        render();
+      });
+  }
+
+  el.send.addEventListener("click", send);
+  el.clear.addEventListener("click", function () { state.queue = []; render(); });
+  el.clearLog.addEventListener("click", function () { el.log.innerHTML = ""; });
+
+  render();
+  health();
+  setInterval(health, HEALTH_MS);
+})();
+</script>
+
+</body></html>
